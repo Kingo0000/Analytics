@@ -1,14 +1,13 @@
+"use client";
+
+import { useState, useEffect } from "react";
 import {
   Users,
   Heart,
   Clock,
   Envelope,
   ArrowUpRight,
-  Plus,
-  ArrowsCounterClockwiseIcon,
-  FacebookLogo,
-  InstagramLogo,
-  XLogo,
+  ArrowClockwise,
 } from "@phosphor-icons/react";
 import {
   Card,
@@ -16,18 +15,65 @@ import {
   Typography,
   Button,
   Chip,
+  Alert,
 } from "@material-tailwind/react";
 import StatCard from "../components/StatCard";
 import Chart from "../components/Chart";
+import ConnectionStatus from "../components/ConnectionStatus";
+import { useApiConnection } from "../app/hooks/useApiConnection";
 
 const Overview = () => {
-  // Chart data
+  const { connections } = useApiConnection();
+  const [stats, setStats] = useState({
+    totalFollowers: 0,
+    engagementRate: 0,
+    optimalPostTime: "2:30 PM",
+    emailsReceived: 0,
+  });
+
+  // Update stats based on connected accounts
+  useEffect(() => {
+    let totalFollowers = 0;
+    let totalEngagement = 0;
+    let connectedAccounts = 0;
+
+    Object.entries(connections).forEach(([platform, connection]) => {
+      if (connection.connected && connection.data) {
+        connectedAccounts++;
+
+        if (platform === "twitter" && connection.data.user) {
+          totalFollowers += connection.data.user.followers_count || 0;
+          totalEngagement += connection.data.metrics?.engagement_rate || 0;
+        }
+        // Add other platforms when implemented
+      }
+    });
+
+    setStats({
+      totalFollowers,
+      engagementRate:
+        connectedAccounts > 0
+          ? (totalEngagement / connectedAccounts).toFixed(1)
+          : 0,
+      optimalPostTime: "2:30 PM",
+      emailsReceived: 1248, // Mock data for now
+    });
+  }, [connections]);
+
+  // Check if any accounts are connected
+  const hasConnectedAccounts = Object.values(connections).some(
+    (conn) => conn.connected
+  );
+
+  // Chart data - will be populated with real data when accounts are connected
   const engagementData = {
     labels: ["Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"],
     datasets: [
       {
         label: "Likes",
-        data: [120, 190, 170, 210, 180, 150, 130],
+        data: hasConnectedAccounts
+          ? [120, 190, 170, 210, 180, 150, 130]
+          : [0, 0, 0, 0, 0, 0, 0],
         borderColor: "rgb(59, 130, 246)",
         backgroundColor: "rgba(59, 130, 246, 0.1)",
         tension: 0.3,
@@ -35,7 +81,9 @@ const Overview = () => {
       },
       {
         label: "Comments",
-        data: [80, 110, 90, 120, 100, 70, 60],
+        data: hasConnectedAccounts
+          ? [80, 110, 90, 120, 100, 70, 60]
+          : [0, 0, 0, 0, 0, 0, 0],
         borderColor: "rgb(139, 92, 246)",
         backgroundColor: "rgba(139, 92, 246, 0.1)",
         tension: 0.3,
@@ -43,7 +91,9 @@ const Overview = () => {
       },
       {
         label: "Shares",
-        data: [40, 60, 50, 70, 55, 45, 35],
+        data: hasConnectedAccounts
+          ? [40, 60, 50, 70, 55, 45, 35]
+          : [0, 0, 0, 0, 0, 0, 0],
         borderColor: "rgb(16, 185, 129)",
         backgroundColor: "rgba(16, 185, 129, 0.1)",
         tension: 0.3,
@@ -57,7 +107,9 @@ const Overview = () => {
     datasets: [
       {
         label: "New Followers",
-        data: [320, 450, 380, 520, 480, 560],
+        data: hasConnectedAccounts
+          ? [320, 450, 380, 520, 480, 560]
+          : [0, 0, 0, 0, 0, 0],
         backgroundColor: "rgba(99, 102, 241, 0.7)",
         borderColor: "rgba(99, 102, 241, 1)",
         borderWidth: 1,
@@ -83,41 +135,6 @@ const Overview = () => {
     ],
   };
 
-  const platforms = [
-    {
-      name: "Facebook",
-      icon: <FacebookLogo size={32} color="#3B82F6" weight="fill" />,
-      description:
-        "Track post performance, engagement trends, and follower growth.",
-      color: "blue",
-      connected: false,
-    },
-    {
-      name: "Instagram",
-      icon: <InstagramLogo size={32} color="#df4e4e" weight="fill" />,
-      description:
-        "Analyze post reach, story views, and optimal posting times. Don't miss",
-      color: "purple",
-      connected: false,
-    },
-    {
-      name: "Twitter",
-      icon: <XLogo size={32} color="#0a0a0a" weight="fill" />,
-      description:
-        "Monitor tweet engagement, follower changes, and hashtag performance.",
-      color: "blue",
-      connected: false,
-    },
-    {
-      name: "Gmail",
-      icon: "📧",
-      description:
-        "Analyze email patterns, frequent senders, and response times.",
-      color: "red",
-      connected: false,
-    },
-  ];
-
   const topPosts = [
     {
       title: "Summer Sale Announcement",
@@ -141,18 +158,20 @@ const Overview = () => {
 
   const recommendations = [
     {
-      title: "Posting Strategy",
-      description:
-        "Based on your audience activity, we recommend increasing your posting frequency to 3-4 times per week on Facebook and 5-7 times per week on Instagram.",
-      priority: "MEDIUM",
+      title: "Connect More Accounts",
+      description: hasConnectedAccounts
+        ? "Great start! Connect more platforms to get comprehensive insights across all your social media channels."
+        : "Connect your social media accounts to start receiving personalized recommendations and insights.",
+      priority: "HIGH",
       color: "blue",
-      icon: "📅",
+      icon: "🔗",
     },
     {
       title: "Optimal Posting Times",
-      description:
-        "Your audience is most active between 1:30-3:30 PM on weekdays. Schedule 70% of your posts during this window for maximum engagement.",
-      priority: "HIGH",
+      description: hasConnectedAccounts
+        ? "Your audience is most active between 1:30-3:30 PM on weekdays. Schedule 70% of your posts during this window for maximum engagement."
+        : "Connect your accounts to discover when your audience is most active.",
+      priority: hasConnectedAccounts ? "HIGH" : "MEDIUM",
       color: "purple",
       icon: "⏰",
     },
@@ -160,7 +179,7 @@ const Overview = () => {
       title: "Email Management",
       description:
         "87 unread emails detected. Consider setting up filters for frequent senders and allocating specific times for email management.",
-      priority: "HIGH",
+      priority: "MEDIUM",
       color: "red",
       icon: "📧",
     },
@@ -168,85 +187,58 @@ const Overview = () => {
 
   return (
     <div className="space-y-8">
-      {/* Account Connection Section */}
-      <Card className="shadow-sm border border-gray-100">
-        <CardBody className="p-6">
-          <div className="flex justify-between items-center mb-6">
-            <div>
-              <Typography variant="h5" className="text-gray-900 font-bold">
-                Connect Your Accounts
-              </Typography>
-              <Typography variant="small" className="text-gray-600 mt-1">
-                Start tracking your social media performance
-              </Typography>
-            </div>
-            <Button
-              variant="text"
-              className="flex items-center gap-2 text-blue-600 rounded-lg"
-            >
-              <ArrowsCounterClockwiseIcon className="w-4 h-4" />
-              Refresh Data
-            </Button>
-          </div>
+      {/* Connection Status */}
+      <ConnectionStatus />
 
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
-            {platforms.map((platform) => (
-              <Card
-                key={platform.name}
-                className="border border-gray-200 hover:shadow-md transition-all duration-300"
-              >
-                <CardBody className="p-6">
-                  <div className="flex items-center mb-4">
-                    <span className="text-2xl mr-3">{platform.icon}</span>
-                    <Typography variant="h6" className="text-gray-900">
-                      {platform.name}
-                    </Typography>
-                  </div>
-                  <Typography variant="small" className="text-gray-600 mb-4">
-                    {platform.description}
-                  </Typography>
-                  <Button
-                    className={`flex align-middle text-center justify-center w-full rounded-lg p-1 bg-${platform.color}-600 hover:bg-${platform.color}-700`}
-                    size="sm"
-                  >
-                    <Plus className="w-4 h-4 mr-2" />
-                    Connect
-                  </Button>
-                </CardBody>
-              </Card>
-            ))}
-          </div>
-        </CardBody>
-      </Card>
+      {!hasConnectedAccounts && (
+        <Alert color="amber" className="mb-6">
+          <Typography variant="small">
+            <strong>Get Started:</strong> Connect at least one social media
+            account to see your analytics dashboard with real data.
+          </Typography>
+        </Alert>
+      )}
 
       {/* Stats Cards */}
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
         <StatCard
           title="Total Followers"
-          value="24,589"
-          change="12.5% from last week"
+          value={stats.totalFollowers.toLocaleString()}
+          change={
+            hasConnectedAccounts
+              ? "12.5% from last week"
+              : "Connect accounts to see data"
+          }
           changeType="positive"
           icon={Users}
           iconColor="bg-blue-500"
         />
         <StatCard
           title="Engagement Rate"
-          value="4.8%"
-          change="0.6% from last week"
+          value={`${stats.engagementRate}%`}
+          change={
+            hasConnectedAccounts
+              ? "0.6% from last week"
+              : "Connect accounts to see data"
+          }
           changeType="positive"
           icon={Heart}
           iconColor="bg-purple-500"
         />
         <StatCard
           title="Optimal Post Time"
-          value="2:30 PM"
-          change="Based on last 30 days"
+          value={stats.optimalPostTime}
+          change={
+            hasConnectedAccounts
+              ? "Based on last 30 days"
+              : "Connect accounts to see data"
+          }
           icon={Clock}
           iconColor="bg-green-500"
         />
         <StatCard
           title="Emails Received"
-          value="1,248"
+          value={stats.emailsReceived.toLocaleString()}
           change="8.3% from last week"
           changeType="negative"
           icon={Envelope}
@@ -275,6 +267,18 @@ const Overview = () => {
             <div className="relative h-80">
               <Chart type="line" data={engagementData} />
             </div>
+            {!hasConnectedAccounts && (
+              <div className="absolute inset-0 bg-white bg-opacity-90 flex items-center justify-center rounded-lg">
+                <div className="text-center">
+                  <Typography variant="h6" className="text-gray-500 mb-2">
+                    No Data Available
+                  </Typography>
+                  <Typography variant="small" className="text-gray-400">
+                    Connect your accounts to see engagement trends
+                  </Typography>
+                </div>
+              </div>
+            )}
           </CardBody>
         </Card>
 
@@ -296,6 +300,18 @@ const Overview = () => {
             <div className="relative h-80">
               <Chart type="bar" data={followerData} />
             </div>
+            {!hasConnectedAccounts && (
+              <div className="absolute inset-0 bg-white bg-opacity-90 flex items-center justify-center rounded-lg">
+                <div className="text-center">
+                  <Typography variant="h6" className="text-gray-500 mb-2">
+                    No Data Available
+                  </Typography>
+                  <Typography variant="small" className="text-gray-400">
+                    Connect your accounts to see follower growth
+                  </Typography>
+                </div>
+              </div>
+            )}
           </CardBody>
         </Card>
       </div>
@@ -319,33 +335,41 @@ const Overview = () => {
               </Button>
             </div>
             <div className="space-y-4">
-              {topPosts.map((post, index) => (
-                <div
-                  key={index}
-                  className="flex justify-between items-center p-4 bg-gray-50 rounded-xl hover:bg-gray-100 transition-colors"
-                >
-                  <div>
-                    <Typography
-                      variant="small"
-                      className="font-medium text-gray-900"
-                    >
-                      {post.title}
-                    </Typography>
-                    <Typography variant="small" className="text-gray-600">
-                      {post.reach.toLocaleString()} reach
-                    </Typography>
+              {hasConnectedAccounts ? (
+                topPosts.map((post, index) => (
+                  <div
+                    key={index}
+                    className="flex justify-between items-center p-4 bg-gray-50 rounded-xl hover:bg-gray-100 transition-colors"
+                  >
+                    <div>
+                      <Typography
+                        variant="small"
+                        className="font-medium text-gray-900"
+                      >
+                        {post.title}
+                      </Typography>
+                      <Typography variant="small" className="text-gray-600">
+                        {post.reach.toLocaleString()} reach
+                      </Typography>
+                    </div>
+                    <Chip
+                      value={post.engagement.toLocaleString()}
+                      size="sm"
+                      className={
+                        post.status === "high"
+                          ? "bg-green-50 text-green-600"
+                          : "bg-yellow-50 text-yellow-600"
+                      }
+                    />
                   </div>
-                  <Chip
-                    value={post.engagement.toLocaleString()}
-                    size="sm"
-                    className={
-                      post.status === "high"
-                        ? "bg-green-50 text-green-600"
-                        : "bg-yellow-50 text-yellow-600"
-                    }
-                  />
+                ))
+              ) : (
+                <div className="text-center py-8">
+                  <Typography variant="small" className="text-gray-500">
+                    Connect your accounts to see top performing posts
+                  </Typography>
                 </div>
-              ))}
+              )}
             </div>
           </CardBody>
         </Card>
@@ -389,7 +413,7 @@ const Overview = () => {
               variant="text"
               className="flex items-center gap-2 text-blue-600 rounded-lg"
             >
-              <ArrowUpRight className="w-4 h-4" />
+              <ArrowClockwise className="w-4 h-4" />
               Refresh
             </Button>
           </div>
